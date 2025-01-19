@@ -1,5 +1,5 @@
 > [!NOTE]
-> This is a fork of DLib, a Garry's Mod hook library and shared library.
+> This is a fork of [DLib](https://gitlab.com/DBotThePony/DLib), a Garry's Mod hook library and shared library.
 > I will not be offering support for this fork.
 
 # DLib
