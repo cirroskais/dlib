@@ -1,3 +1,7 @@
+> [!NOTE]
+> This is a fork of DLib, a Garry's Mod hook library and shared library.
+> I will not be offering support for this fork.
+
 # DLib
 
 A Garry's Mod library (shared code) for (mostly) DBotThePony's addons
