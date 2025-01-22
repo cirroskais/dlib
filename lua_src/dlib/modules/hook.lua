@@ -27,6 +27,9 @@
 	- Copy-on-write event tables; calling hook.Remove during ongoing hook.Call will not have any side-effects
 ]]
 
+-- No more DLib hooks!
+--[[
+
 local pairs = pairs
 local ipairs = ipairs
 local print = print
