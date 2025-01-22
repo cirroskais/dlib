@@ -1,0 +1,212 @@
+function hook.DisableHook(event, stringID)
+	assert(type(event) == 'string', 'hook.DisableHook - event is not a string! ' .. type(event))
+
+	if not stringID then
+		if __disabled[event] then
+			return false
+		end
+
+		__disabled[event] = true
+		hook.Reconstruct(event)
+		return true
+	end
+
+	if not __table[event] then return end
+
+	stringID = transformStringID('hook.DisableHook', stringID, event)
+
+	for priority, eventData in pairs(__table[event]) do
+		if eventData[stringID] then
+			local wasDisabled = eventData[stringID].disabled
+			eventData[stringID].disabled = true
+			hook.Reconstruct(event)
+			return not wasDisabled
+		end
+	end
+end
+
+function hook.Reconstruct(eventToReconstruct)
+	if not eventToReconstruct then
+		for event, data in pairs(__table) do
+			hook.Reconstruct(event)
+		end
+
+		return
+	end
+
+	if __disabled[eventToReconstruct] then
+		__tableOptimized[eventToReconstruct] = identity
+		return
+	elseif not __table[eventToReconstruct] then
+		__tableOptimized[eventToReconstruct] = gamemodePassthrough
+		return
+	end
+
+	local index = 1
+	local inboundgmod = __tableGmod[eventToReconstruct]
+
+	local callables = {}
+
+	for priority, hookList in SortedPairs(__table[eventToReconstruct]) do
+		for stringID, hookData in pairs(hookList) do
+			if not hookData.disabled then
+				local isValid = false
+
+				if hookData.typeof then
+					isValid = true
+				elseif hookData.isthread then
+					if coroutine_status(hookData.id) == 'dead' then
+						hookList[stringID] = nil
+						inboundgmod[stringID] = nil
+					else
+						isValid = true
+					end
+				else
+					if hookData.id:IsValid() then
+						isValid = true
+					else
+						hookList[stringID] = nil
+						inboundgmod[stringID] = nil
+					end
+				end
+
+				if isValid then
+					local callable
+
+					if hookData.typeof then
+						callable = hookData.callback or hookData.funcToCall
+					elseif hookData.isthread then
+						local self = hookData.id
+						local upvalue = hookData.callback
+
+						function callable(...)
+							if coroutine_status(self) == 'dead' then
+								hook.Remove(hookData.event, self)
+								return
+							end
+
+							return upvalue(self, ...)
+						end
+					else
+						local self = hookData.id
+						local upvalue = hookData.callback or hookData.funcToCall
+
+						function callable(...)
+							if not self:IsValid() then
+								hook.Remove(hookData.event, self)
+								return
+							end
+
+							return upvalue(self, ...)
+						end
+					end
+
+					if hook.PROFILING then
+						local THIS_RUNTIME = 0
+						local THIS_CALLS = 0
+						local upfuncProfiled = callable
+
+						function callable(...)
+							THIS_CALLS = THIS_CALLS + 1
+							local t = SysTime()
+							local a, b, c, d, e, f = upfuncProfiled(...)
+							THIS_RUNTIME = THIS_RUNTIME + (SysTime() - t)
+							return a, b, c, d, e, f
+						end
+
+						function hookData.profileEnds()
+							hookData.THIS_RUNTIME = THIS_RUNTIME
+							hookData.THIS_CALLS = THIS_CALLS
+						end
+					end
+
+					callables[index] = callable
+					index = index + 1
+				end
+			end
+		end
+	end
+
+	local post = {}
+	local postIndex = 1
+
+	if __tableModifiersPost[eventToReconstruct] ~= nil then
+		local event = __tableModifiersPost[eventToReconstruct]
+
+		for stringID, hookData in pairs(event) do
+			local isValid = false
+
+			if hookData.typeof then
+				isValid = true
+			else
+				if hookData.id:IsValid() then
+					isValid = true
+				else
+					event[stringID] = nil
+				end
+			end
+
+			if isValid then
+				post[postIndex] = hookData.callback or hookData.funcToCall
+				postIndex = postIndex + 1
+			end
+		end
+	end
+
+	if index == 1 and postIndex == 1 then
+		__tableOptimized[eventToReconstruct] = gamemodePassthrough
+	elseif index ~= 1 and postIndex == 1 then
+		__tableOptimized[eventToReconstruct] = function(event, tab, ...)
+			local a, b, c, d, e, f
+
+			for i = 1, index - 1 do
+				a, b, c, d, e, f = callables[i](...)
+				if a ~= nil then return a, b, c, d, e, f end
+			end
+
+			return gamemodePassthrough(event, tab, ...)
+		end
+	elseif index == 1 and postIndex ~= 1 then
+		__tableOptimized[eventToReconstruct] = function(event, tab, ...)
+			if tab ~= nil then
+				local a, b, c, d, e, f = gamemodePassthrough(event, tab, ...)
+
+				if a ~= nil then
+					for i2 = 1, postIndex - 1 do
+						a, b, c, d, e, f = post[i2](a, b, c, d, e, f)
+					end
+
+					return a, b, c, d, e, f
+				end
+			end
+		end
+	else
+		__tableOptimized[eventToReconstruct] = function(event, tab, ...)
+			local a, b, c, d, e, f
+
+			for i = 1, index - 1 do
+				a, b, c, d, e, f = callables[i](...)
+
+				if a ~= nil then
+					for i2 = 1, postIndex - 1 do
+						a, b, c, d, e, f = post[i2](a, b, c, d, e, f)
+					end
+
+					return a, b, c, d, e, f
+				end
+			end
+
+			if tab ~= nil then
+				a, b, c, d, e, f = gamemodePassthrough(event, tab, ...)
+
+				if a ~= nil then
+					for i2 = 1, postIndex - 1 do
+						a, b, c, d, e, f = post[i2](a, b, c, d, e, f)
+					end
+
+					return a, b, c, d, e, f
+				end
+			end
+		end
+	end
+end

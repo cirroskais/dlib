@@ -105,8 +105,7 @@ file.mkdir('dlib')
 
 DLib.MessageNoNL('Initializing DLib GLua extensions ... ')
 
--- No DLib hooks!
--- DLib.SharedInclude('modules/hook.lua')
+DLib.SharedInclude('modules/hook_ext.lua')
 
 DLib.SharedInclude('util/combathelper.lua')
 DLib.SharedInclude('util/lerp.lua')
