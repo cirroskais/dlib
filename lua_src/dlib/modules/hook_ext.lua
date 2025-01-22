@@ -210,3 +210,53 @@ function hook.Reconstruct(eventToReconstruct)
 		end
 	end
 end
+
+function hook.AddTask(event, stringID, callback)
+	assert(type(event) == 'string', 'bad argument #1 to hook.AddTask (string expected, got ' .. type(event) .. ')', 2)
+	assert(type(callback) == 'function', 'bad argument #3 to hook.AddTask (function expected, got ' .. type(callback) .. ')', 2)
+
+	stringID = transformStringID('hook.AddTask', stringID, event)
+
+	local hookData = {
+		event = event,
+		callback = callback,
+		id = stringID,
+		idString = tostring(stringID),
+		registeredAt = SysTime(),
+		typeof = isstring(stringID)
+	}
+
+	__tableTasks[event] = __tableTasks[event] or {}
+	__tableTasks[event][stringID] = hookData
+
+	hook.ReconstructTasks(event)
+end
+
+function hook.AddPostModifier(event, stringID, callback)
+	__tableModifiersPost[event] = __tableModifiersPost[event] or {}
+
+	if type(event) ~= 'string' then
+		DLib.Message(traceback('hook.AddPostModifier - event is not a string! ' .. type(event)))
+		return false
+	end
+
+	if type(callback) ~= 'function' then
+		DLib.Message(traceback('hook.AddPostModifier - function is not a function! ' .. type(funcToCall)))
+		return false
+	end
+
+	stringID = transformStringID('hook.AddPostModifier', stringID, event)
+
+	local hookData = {
+		event = event,
+		callback = callback,
+		id = stringID,
+		idString = tostring(stringID),
+		registeredAt = SysTime(),
+		typeof = isstring(stringID)
+	}
+
+	__tableModifiersPost[event][stringID] = hookData
+	hook.Reconstruct(event)
+	return true, hookData
+end
