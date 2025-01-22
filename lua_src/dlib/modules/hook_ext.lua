@@ -1,3 +1,7 @@
+hook.__table = hook.__table or {}
+
+local __table = hook.__table
+
 function hook.DisableHook(event, stringID)
 	assert(type(event) == 'string', 'hook.DisableHook - event is not a string! ' .. type(event))
 
