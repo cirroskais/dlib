@@ -1,8 +1,10 @@
 hook.__table = hook.__table or {}
 hook.__tableTasks = hook.__tableTasks or {}
+hook.__tableModifiersPost = hook.__tableModifiersPost or {}
 
 local __table = hook.__table
 local __tableTasks = hook.__tableTasks
+local __tableModifiersPost = hook.__tableModifiersPost
 
 local function transformStringID(funcname, stringID, event)
 	if isstring(stringID) then return stringID end
