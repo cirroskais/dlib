@@ -2,6 +2,33 @@ hook.__table = hook.__table or {}
 
 local __table = hook.__table
 
+local function transformStringID(funcname, stringID, event)
+	if isstring(stringID) then return stringID end
+	if type(stringID) == 'thread' then return stringID end
+
+	if type(stringID) == 'number' then
+		stringID = tostring(stringID)
+	end
+
+	if type(stringID) == 'boolean' then
+		error(string.format('bad argument #2 to %s (object expected, got boolean)', funcname), 3)
+	end
+
+	if type(stringID) ~= 'string' then
+		local success = pcall(function()
+			stringID.IsValid(stringID)
+		end)
+
+		if not success then
+			error(string.format('bad argument #2 to %s (object expected, got %s)', funcname, type(stringID)), 3)
+			stringID = tostring(stringID)
+		end
+	end
+
+	return stringID
+end
+
+
 function hook.DisableHook(event, stringID)
 	assert(type(event) == 'string', 'hook.DisableHook - event is not a string! ' .. type(event))
 
