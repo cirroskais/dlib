@@ -39,7 +39,10 @@ local surface_DrawLine = surface.DrawLine
 
 local nomat = surface.GetTextureID('gui/corner8')
 
-DLib.skin.ENABLE_BLUR = 0
+DLib.skin.ENABLE_BLUR = {}
+function DLib.skin.ENABLE_BLUR.GetBool()
+	return false
+end
 
 function DLib.skin.Simple_DrawBox(x, y, w, h, color)
 	if color then
