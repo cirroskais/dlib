@@ -39,7 +39,7 @@ local surface_DrawLine = surface.DrawLine
 
 local nomat = surface.GetTextureID('gui/corner8')
 
-DLib.skin.ENABLE_BLUR = CreateConVar('dlib_vguiblur', '1', {FCVAR_ARCHIVE}, 'Enable VGUI elements background blur')
+DLib.skin.ENABLE_BLUR = 0
 
 function DLib.skin.Simple_DrawBox(x, y, w, h, color)
 	if color then

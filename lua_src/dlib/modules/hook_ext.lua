@@ -399,3 +399,13 @@ function hook.ReconstructTasks(eventToReconstruct)
 		end
 	end)
 end
+
+function hook.Once(event, callback, priority)
+	hook._O_SALT = hook._O_SALT + 1
+	local id = 'hook.Once.' .. hook._O_SALT
+
+	hook.Add(event, id, function(...)
+		hook.Remove(event, id)
+		return callback(...)
+	end, priority)
+end
