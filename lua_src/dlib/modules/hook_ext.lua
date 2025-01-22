@@ -92,7 +92,7 @@ function hook.Reconstruct(eventToReconstruct)
 				if hookData.typeof then
 					isValid = true
 				elseif hookData.isthread then
-					if coroutine_status(hookData.id) == 'dead' then
+					if coroutine.status(hookData.id) == 'dead' then
 						hookList[stringID] = nil
 						inboundgmod[stringID] = nil
 					else
@@ -117,7 +117,7 @@ function hook.Reconstruct(eventToReconstruct)
 						local upvalue = hookData.callback
 
 						function callable(...)
-							if coroutine_status(self) == 'dead' then
+							if coroutine.status(self) == 'dead' then
 								hook.Remove(hookData.event, self)
 								return
 							end
@@ -354,7 +354,7 @@ function hook.ReconstructTasks(eventToReconstruct)
 				end
 
 				if not hookData.thread or coroutine.status(hookData.thread) == 'dead' then
-					hookData.thread = coroutine_create(callable)
+					hookData.thread = coroutine.create(callable)
 				end
 
 				target[index] = hookData.thread
@@ -383,16 +383,16 @@ function hook.ReconstructTasks(eventToReconstruct)
 
 		local thread = target[task_i]
 		ignore_dead = false
-		local status, err = coroutine_resume(thread)
+		local status, err = coroutine.resume(thread)
 
 		if not status then
-			target[task_i] = coroutine_create(target_funcs[task_i])
+			target[task_i] = coroutine.create(target_funcs[task_i])
 			target_data[task_i].thread = target[task_i]
 			error('Task ' .. target_data[task_i].idString .. ' failed: ' .. err)
 		end
 
-		if not ignore_dead and coroutine_status(thread) == 'dead' then
-			target[task_i] = coroutine_create(target_funcs[task_i])
+		if not ignore_dead and coroutine.status(thread) == 'dead' then
+			target[task_i] = coroutine.create(target_funcs[task_i])
 			target_data[task_i].thread = target[task_i]
 		end
 	end)
