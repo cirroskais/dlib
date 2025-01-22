@@ -1,10 +1,12 @@
 hook.__table = hook.__table or {}
 hook.__tableTasks = hook.__tableTasks or {}
 hook.__tableModifiersPost = hook.__tableModifiersPost or {}
+hook.__disabled = hook.__disabled or {}
 
 local __table = hook.__table
 local __tableTasks = hook.__tableTasks
 local __tableModifiersPost = hook.__tableModifiersPost
+local __disabled = hook.__disabled
 
 local function transformStringID(funcname, stringID, event)
 	if isstring(stringID) then return stringID end
@@ -294,4 +296,104 @@ function hook.AddPostModifier(event, stringID, callback)
 	__tableModifiersPost[event][stringID] = hookData
 	hook.Reconstruct(event)
 	return true, hookData
+end
+
+function hook.ReconstructTasks(eventToReconstruct)
+	if not eventToReconstruct then
+		for event, data in pairs(__tableTasks) do
+			hook.ReconstructTasks(event)
+		end
+
+		return
+	end
+
+	if not __tableTasks[eventToReconstruct] or not next(__tableTasks[eventToReconstruct]) then
+		hook.Remove(eventToReconstruct, 'DLib Task Executor')
+		return
+	end
+
+	local index = 1
+	local target = {}
+	local target_funcs = {}
+	local target_data = {}
+	local ignore_dead = false
+
+	for stringID, hookData in pairs(__tableTasks[eventToReconstruct]) do
+		if not hookData.disabled then
+			local applicable = false
+
+			if hookData.typeof then
+				applicable = true
+			else
+				if hookData.id:IsValid() then
+					applicable = true
+				else
+					hookList[stringID] = nil
+					inboundgmod[stringID] = nil
+				end
+			end
+
+			if applicable then
+				local callable
+
+				if hookData.typeof then
+					callable = hookData.callback
+				else
+					local self = hookData.id
+					local upfuncCallableSelf = hookData.callback
+
+					function callable()
+						if not self:IsValid() then
+							ignore_dead = true
+							hook.RemoveTask(hookData.event, self)
+							return
+						end
+
+						return upfuncCallableSelf(self)
+					end
+				end
+
+				if not hookData.thread or coroutine.status(hookData.thread) == 'dead' then
+					hookData.thread = coroutine_create(callable)
+				end
+
+				target[index] = hookData.thread
+				target_funcs[index] = callable
+				target_data[index] = hookData
+				index = index + 1
+			end
+		end
+	end
+
+	index = index - 1
+
+	if index == 0 then
+		hook.Remove(eventToReconstruct, 'DLib Task Executor')
+		return
+	end
+
+	local task_i = 0
+
+	hook.Add(eventToReconstruct, 'DLib Task Executor', function()
+		task_i = task_i + 1
+
+		if task_i > index then
+			task_i = 1
+		end
+
+		local thread = target[task_i]
+		ignore_dead = false
+		local status, err = coroutine_resume(thread)
+
+		if not status then
+			target[task_i] = coroutine_create(target_funcs[task_i])
+			target_data[task_i].thread = target[task_i]
+			error('Task ' .. target_data[task_i].idString .. ' failed: ' .. err)
+		end
+
+		if not ignore_dead and coroutine_status(thread) == 'dead' then
+			target[task_i] = coroutine_create(target_funcs[task_i])
+			target_data[task_i].thread = target[task_i]
+		end
+	end)
 end
